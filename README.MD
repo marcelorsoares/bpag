@@ -5,3 +5,5 @@ Módulo **NÃO-OFICIAL** de integração com a API do Gateway de Pagamentos da U
 Compatível com Python 3.5+
 
 Veja o exemplo na pasta exemplate/test.py de como usar
+
+Altere as configurações dentro do arquivo bpag/config.py
