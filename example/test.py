@@ -95,7 +95,8 @@ def order(request, response):
     cvv = '123'
 
     # Fazer uma compra passando o cartao de credito:
-    order.set_credit_card(brand=bandeira, cvv=cvv, expdate=expdate, holder=holder, number=number)
+    order.set_credit_card(brand=bandeira, cvv=cvv, expdate=expdate, holder=holder, number=number,
+                          installments=pedido.installments)
 
     # Fazer uma compra passando um token de cartão de credito:
     order.set_credit_card(token='ID-DO-TOKEN', cvv=123)
@@ -143,11 +144,9 @@ def cycle_order(request, response):
     pedido.reference = 'order-{}'.format(pedido.id)
 
     # Define o pagamento como recorrente
-    order.set_subscription(cycles='numero-de-vezes-que-vai-repetir', start_date=datetime.now().strftime('%Y-%m-%d'))
-
+    order.set_subscription(cycles=pedido.installments, start_date=datetime.now().strftime('%Y-%m-%d'))
     # Fazer uma compra passando o cartao de credito:
     order.set_credit_card(brand=bandeira, cvv=cvv, expdate=expdate, holder=holder, number=number)
-
     # Fazer uma compra passando um token de cartão de credito:
     order.set_credit_card(token='ID-DO-TOKEN', cvv=123)
 
