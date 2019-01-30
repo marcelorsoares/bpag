@@ -14,6 +14,13 @@ class Profile(object):
     district = ''
 
 
+class Pedido(object):
+    id = 0
+    total = 0
+    installments = 0
+    reference = ''
+
+
 # Metodo para gerar token de cartao de credito
 def generate_token_card(request, response):
     payment_token = BPag()
@@ -62,20 +69,24 @@ def order(request, response):
     profile.state = 'State'
     profile.zip_code = '12345-678'
 
+    pedido = Pedido()
+    pedido.id = 1
+    # parcelas
+    pedido.installments = 3
+    pedido.reference = 'order-{}'.format(pedido.id)
+
     order.add_customer(id=profile.id,
-                               first_name=profile.first_name,
-                               last_name=profile.last_name,
-                               email=profile.email,
-                               document=profile.document,
-                               city=profile.city,
-                               state=profile.state,
-                               cep=profile.zip_code,
-                               district=profile.district)
+                       first_name=profile.first_name,
+                       last_name=profile.last_name,
+                       email=profile.email,
+                       document=profile.document,
+                       city=profile.city,
+                       state=profile.state,
+                       cep=profile.zip_code,
+                       district=profile.district)
 
     order.set_payment_method(type='CARD',
-                                     subtype='CREDIT',
-                                     installments=1,
-                                     start_date=datetime.now().strftime('%Y-%m-%d'))
+                             subtype='CREDIT')
 
     bandeira = 'VISA'
     holder = 'Nome no cartao'
@@ -83,7 +94,62 @@ def order(request, response):
     expdate = '2020-01'
     cvv = '123'
 
+    # Fazer uma compra passando o cartao de credito:
     order.set_credit_card(brand=bandeira, cvv=cvv, expdate=expdate, holder=holder, number=number)
 
-    return order.create_token_card()
+    # Fazer uma compra passando um token de cartão de credito:
+    order.set_credit_card(token='ID-DO-TOKEN', cvv=123)
+
+    return order.create_order(pedido.id, pedido.reference)
+
+
+# Fazer assinatura de um plano
+def cycle_order(request, response):
+    order = BPag()
+
+    profile = Profile()
+    profile.id = 1
+    profile.first_name = 'Name'
+    profile.last_name = 'Lastname'
+    profile.email = 'email@test.com'
+    profile.document = 123456789
+    profile.city = 'City'
+    profile.state = 'State'
+    profile.zip_code = '12345-678'
+
+    order.add_customer(id=profile.id,
+                       first_name=profile.first_name,
+                       last_name=profile.last_name,
+                       email=profile.email,
+                       document=profile.document,
+                       city=profile.city,
+                       state=profile.state,
+                       cep=profile.zip_code,
+                       district=profile.district)
+
+    order.set_payment_method(type='CARD',
+                             subtype='CREDIT')
+
+    bandeira = 'VISA'
+    holder = 'Nome no cartao'
+    number = '1234567890'
+    expdate = '2020-01'
+    cvv = '123'
+
+    pedido = Pedido()
+    pedido.id = 1
+    # parcelas
+    pedido.installments = 3
+    pedido.reference = 'order-{}'.format(pedido.id)
+
+    # Define o pagamento como recorrente
+    order.set_subscription(cycles='numero-de-vezes-que-vai-repetir', start_date=datetime.now().strftime('%Y-%m-%d'))
+
+    # Fazer uma compra passando o cartao de credito:
+    order.set_credit_card(brand=bandeira, cvv=cvv, expdate=expdate, holder=holder, number=number)
+
+    # Fazer uma compra passando um token de cartão de credito:
+    order.set_credit_card(token='ID-DO-TOKEN', cvv=123)
+
+    return order.create_order(pedido.id, pedido.reference)
 
