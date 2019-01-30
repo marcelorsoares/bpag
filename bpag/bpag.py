@@ -88,6 +88,7 @@ class BPag(object):
         self.processor = Configs['PROCESSOR']
         self.credit_card = {}
         self.paymentMethod = {}
+        self.subscription = {}
         self.content_md5 = ''
         self.reference = ''
         self.payment_subtype = 'CREDIT'
@@ -106,7 +107,7 @@ class BPag(object):
         self.content_response = {}
         self.reference_word = Configs['REFERENCE_WORD']
 
-    def set_credit_card(self, brand=None, cvv=None, expdate=None, holder=None, installments=0, number=None, token=False):
+    def set_credit_card(self, brand=None, cvv=None, expdate=None, holder=None, installments=1, number=None, token=False):
 
         self.credit_card = {}
 
@@ -122,8 +123,7 @@ class BPag(object):
         if expdate:
             self.credit_card['expDate'] = expdate
 
-        if installments:
-            self.credit_card['installments'] = installments
+        self.credit_card['installments'] = installments
 
         if holder:
             self.credit_card['holder'] = holder
@@ -151,8 +151,7 @@ class BPag(object):
                                       'documentType': 'CPF'
                                       })
 
-    def set_payment_method(self, type=None, subtype=None, processor=None, technology=None, financial_institution=None,
-                           installments=1, start_date=datetime.now(), cycles=False):
+    def set_payment_method(self, type=None, subtype=None, processor=None, technology=None, financial_institution=None):
         payment = {}
         if type is not None:
             payment['paymentType'] = type
@@ -179,15 +178,21 @@ class BPag(object):
         else:
             payment['financialInstitution'] = self.financial_institution
 
-        if installments > 1 and cycles:
-            payment['subscription'] = {'cycleType': cycles,
-                                       'cycles': installments,
-                                       'startDate': start_date}
+        # if installments > 1 and cycles:
+        #     payment['subscription'] = {'cycleType': cycles,
+        #                                'cycles': installments,
+        #                                'startDate': start_date}
 
         # payment['reference'] = reference
 
         self.paymentMethod = payment
         return self.paymentMethod
+
+    def set_subscription(self, cycle_type='MONTHLY', cycles=1, start_date=datetime.now()):
+        self.subscription = {'cycleType': cycle_type,
+                             'cycles': cycles,
+                             'startDate': start_date}
+        return self.subscription
 
     def get_signed_string(self, content_md5, http_path_info):
         return (self.request_method + "\n" + content_md5 + "\n" + self.content_type + "\n" + self.date_header + "\n" +
@@ -245,6 +250,8 @@ class BPag(object):
         print('-')
         print('Payment Method: ', self.paymentMethod)
         print('-')
+        print('Subscriptions: ', self.subscription)
+        print('-')
         print('Products: ', self.products)
         print('-')
         print('Customers: ', self.customers)
@@ -254,8 +261,8 @@ class BPag(object):
         self.request_method = 'POST'
 
         self.content = {
-            'alias': '{}-{}-{}{}'.format(self.customers[0]['id'], str(self.credit_card['number'])[:5],
-                                          str(self.credit_card['number'])[-4:], self.credit_card['expDate']),
+            'alias': '{}-{}-{}{}'.format(self.customers[0]['id'], str(self.credit_card['number'])[:3],
+                                         str(self.credit_card['number'])[-3:], self.credit_card['expDate'][:4]),
             'brand': self.credit_card['brand'],
             'number': self.credit_card['number'],
             'customerId': self.customers[0]['id'],
@@ -266,9 +273,9 @@ class BPag(object):
 
         self.get_content_md5()
 
-        string_to_sign = self.get_signed_string(content_md5=self.content_md5, http_path_info=self.http_path_info)
+        self.string_to_sign = self.get_signed_string(content_md5=self.content_md5, http_path_info=self.http_path_info)
 
-        self.signature = self.get_signature(string_to_sign)
+        self.signature = self.get_signature(self.string_to_sign)
 
         self.authorization = self.get_authorization()
 
@@ -276,7 +283,7 @@ class BPag(object):
             self.verbose_mode()
 
         if self.debug:
-            return True
+            return json.dumps(self.content)
         else:
             try:
                 self.response = requests.post(self.api_root + self.http_path_info,
@@ -389,7 +396,10 @@ class BPag(object):
             self.content['account'] = self.account
             self.content['notificationUrl'] = self.notification_url
 
-            if self.paymentMethod:
+            if 'cycles' in self.subscription:
+                self.content['payments'] = [{'amount': self.amount, 'paymentMethod': self.paymentMethod,
+                                             'creditCard': self.credit_card, 'subscription': self.subscription}]
+            else:
                 self.content['payments'] = [{'amount': self.amount, 'paymentMethod': self.paymentMethod,
                                              'creditCard': self.credit_card}]
 

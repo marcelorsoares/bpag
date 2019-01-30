@@ -1,5 +1,3 @@
-from django.conf import settings
-
 Configs = dict(
     API_ROOT='https://psp.uol.com.br',
     FINANCIAL_INSTITUTION='REDECARD',
